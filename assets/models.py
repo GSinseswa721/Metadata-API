@@ -42,6 +42,7 @@ class Asset(models.Model):
 class ChangeLog(models.Model):
     asset          = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='history')
     change_summary = models.CharField(max_length=255)
+    changed_by     = models.CharField(max_length=100, default='anonymous')
     snapshot       = models.JSONField()
     changed_at     = models.DateTimeField(auto_now_add=True)
 

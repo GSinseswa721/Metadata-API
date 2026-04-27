@@ -30,4 +30,16 @@ All tests are in `assets/tests.py` and run with `python3 manage.py test assets`.
 
 ### 7. `test_suggest_tags_for_incomplete_asset`
 **What it checks:** An asset with a short title and no description/tags gets back `needs-better-title`, `needs-description`, and `untagged` suggestions.
-**Why:** Verifies the rule based quality tag engine logic end to end through the API.
+**Why:** Verifies the rule-based quality tag engine logic end to end through the API.
+
+### 8. `test_audit_log_captures_previous_and_new_values`
+**What it checks:** After a PATCH, the ChangeLog `diff` correctly records the previous and new values of the changed field (e.g. status: draft → approved).
+**Why:** Directly verifies the spec update requirement the audit log must capture what changed, not just that something changed.
+
+### 9. `test_create_changelog_has_no_previous`
+**What it checks:** On asset creation, the ChangeLog snapshot has `previous: null` since there is no prior state.
+**Why:** Verifies that the create and update audit paths are handled separately and correctly.
+
+### 10. `test_audit_log_records_changed_by`
+**What it checks:** The `changed_by` field on the ChangeLog is set to `"anonymous"` when no authenticated user makes the request.
+**Why:** Verifies the "who" requirement from the spec update the audit log must record the author of every change.

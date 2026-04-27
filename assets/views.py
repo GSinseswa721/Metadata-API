@@ -33,7 +33,7 @@ class AssetViewSet(viewsets.ModelViewSet):
             qs = qs.filter(asset_type=asset_type)
         return qs
 
-    def _snapshot(self, asset):
+    def _get_snapshot(self, asset):
         return {
             'title':       asset.title,
             'description': asset.description,
@@ -43,20 +43,43 @@ class AssetViewSet(viewsets.ModelViewSet):
             'tags':        list(asset.tags.values_list('name', flat=True)),
         }
 
+    def _get_changed_by(self):
+        user = self.request.user
+        if user and user.is_authenticated:
+            return user.username
+        return 'anonymous'
+
     def perform_create(self, serializer):
         asset = serializer.save()
         ChangeLog.objects.create(
             asset=asset,
             change_summary='Asset created',
-            snapshot=self._snapshot(asset),
+            changed_by=self._get_changed_by(),
+            snapshot={
+                'previous': None,
+                'new':      self._get_snapshot(asset),
+            }
         )
 
     def perform_update(self, serializer):
-        asset = serializer.save()
+        previous = self._get_snapshot(serializer.instance)
+        asset    = serializer.save()
+        new      = self._get_snapshot(asset)
+        diff = {
+            field: {'previous': previous[field], 'new': new[field]}
+            for field in new
+            if previous[field] != new[field]
+        }
+
         ChangeLog.objects.create(
             asset=asset,
-            change_summary='Asset updated',
-            snapshot=self._snapshot(asset),
+            change_summary=f"Updated fields: {', '.join(diff.keys()) or 'none'}",
+            changed_by=self._get_changed_by(),
+            snapshot={
+                'previous': previous,
+                'new':      new,
+                'diff':     diff,
+            }
         )
 
     @action(detail=True, methods=['get'])

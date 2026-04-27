@@ -65,3 +65,42 @@ class QualityTagTests(TestCase):
         self.assertIn('needs-better-title', suggest.data['suggestions'])
         self.assertIn('needs-description',  suggest.data['suggestions'])
         self.assertIn('untagged',           suggest.data['suggestions'])
+
+
+class AuditLogDetailTests(TestCase):
+    def setUp(self):
+        self.client  = APIClient()
+        self.payload = {
+            'title':       'Promo Banner',
+            'description': 'Main promo banner for campaign',
+            'asset_type':  'image',
+            'file_url':    'https://cdn.dre.rw/promo-q2.png',
+            'status':      'draft',
+        }
+
+    def test_audit_log_captures_previous_and_new_values(self):
+        res      = self.client.post('/api/assets/', self.payload)
+        asset_id = res.data['id']
+        self.client.patch(f'/api/assets/{asset_id}/', {'status': 'approved'})
+
+        update_log = ChangeLog.objects.filter(
+            asset_id=asset_id,
+            change_summary__icontains='Updated'
+        ).first()
+
+        self.assertIsNotNone(update_log)
+        self.assertEqual(update_log.snapshot['diff']['status']['previous'], 'draft')
+        self.assertEqual(update_log.snapshot['diff']['status']['new'], 'approved')
+        self.assertEqual(update_log.changed_by, 'anonymous')
+
+    def test_create_changelog_has_no_previous(self):
+        res      = self.client.post('/api/assets/', self.payload)
+        asset_id = res.data['id']
+        log      = ChangeLog.objects.get(asset_id=asset_id)
+        self.assertIsNone(log.snapshot['previous'])
+
+    def test_audit_log_records_changed_by(self):
+        res      = self.client.post('/api/assets/', self.payload)
+        asset_id = res.data['id']
+        log      = ChangeLog.objects.get(asset_id=asset_id)
+        self.assertEqual(log.changed_by, 'anonymous')

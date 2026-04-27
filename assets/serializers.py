@@ -17,7 +17,7 @@ class TagSerializer(serializers.ModelSerializer):
 class ChangeLogSerializer(serializers.ModelSerializer):
     class Meta:
         model  = ChangeLog
-        fields = ['id', 'change_summary', 'snapshot', 'changed_at']
+        fields = ['id', 'change_summary', 'changed_by', 'snapshot', 'changed_at'] 
 
 
 class AssetSerializer(serializers.ModelSerializer):
